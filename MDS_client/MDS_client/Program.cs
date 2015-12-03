@@ -1,10 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Configuration;
+using System.Collections.Specialized;
 
 namespace MDS_client
 {
@@ -59,13 +61,40 @@ namespace MDS_client
 
             if (time != null && !string.IsNullOrWhiteSpace(s)) {
                 string URI = serverURL + ":" + serverPort + postURL;
+                string result = "";
                 Console.WriteLine(URI);
-                string parameters = "clientID=" + clientID + "&clientKey=" + clientKey + "&message=" + s + "&prio=" + priority + "&time=" + time.ToString("yyyy-MM-dd HH:mm:ss");
-                using (WebClient wc = new WebClient()) {
-                    wc.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
-                    string HtmlResult = wc.UploadString(URI, parameters);
-                    Console.WriteLine(HtmlResult);
+                string parameters = "regMsg=&clientID=" + clientID + "&clientKey=" + clientKey + "&message=" + s + "&prio=" + priority.ToString() + "&time=" + time.ToString("yyyy-MM-dd&nbsp;HH:mm:ss");
+
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(URI);
+                req.KeepAlive = false;
+                req.Method = "POST";
+                req.ContentLength = parameters.Length;
+                req.ContentType = "application/x-www-form-urlencoded";
+                req.AllowWriteStreamBuffering = false;
+                req.Timeout = System.Threading.Timeout.Infinite;
+                req.ProtocolVersion = HttpVersion.Version10;
+                ServicePointManager.DefaultConnectionLimit = 1000;
+
+                StreamWriter stmWriter = null;
+
+                try{
+                    stmWriter = new StreamWriter(req.GetRequestStream());
+                    stmWriter.Write(parameters);
+                } catch (Exception e){
+                    Console.WriteLine(e.Message);
                 }
+                finally {
+                    stmWriter.Close();
+                }
+
+                //Skriva ut resultatet.
+                HttpWebResponse resp = (HttpWebResponse)req.GetResponse();
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8)) {
+                    result = sr.ReadToEnd();
+                    sr.Close();
+                }
+
+                Console.WriteLine(result);
             }
 
         }
